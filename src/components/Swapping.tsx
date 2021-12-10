@@ -1,11 +1,6 @@
 import { ArrowRightOutlined, LoadingOutlined, PauseCircleOutlined } from '@ant-design/icons'
 import { Web3Provider } from '@ethersproject/providers'
-import LiFi, {
-  createAndPushProcess,
-  initStatus,
-  setStatusDone,
-  setStatusFailed,
-} from '@lifinance/sdk'
+import LiFi, { DefaultExecutionSettings, StatusManager } from '@lifinance/sdk'
 import { useWeb3React } from '@web3-react/core'
 import { Avatar, Button, Divider, Row, Space, Spin, Timeline, Tooltip, Typography } from 'antd'
 import BigNumber from 'bignumber.js'
@@ -122,20 +117,14 @@ const Swapping = ({ route, updateRoute, onSwapDone }: SwappingProps) => {
   }, [])
 
   const checkChain = async (step: Step) => {
-    const updateFunction = (step: Step, status: Execution) => {
-      step.execution = status
-      storeActiveRoute(route)
-      updateRoute(route)
-    }
+    const settings = { updateCallback }
+    const statusManager = new StatusManager(route, { ...DefaultExecutionSettings, ...settings })
 
-    const { status, update } = initStatus(
-      (status: Execution) => updateFunction(step, status),
-      step.execution,
-    )
+    const { status, updateStepWithStatus } = statusManager.initStatus(step)
     const chain = getChainById(step.action.fromChainId)
-    const switchProcess = createAndPushProcess(
+    const switchProcess = statusManager.createAndPushProcess(
       'switchProcess',
-      update,
+      updateStepWithStatus,
       status,
       `Change Chain to ${chain.name}`,
     )
@@ -147,11 +136,11 @@ const Swapping = ({ route, updateRoute, onSwapDone }: SwappingProps) => {
     } catch (e: any) {
       if (e.message) switchProcess.errorMessage = e.message
       if (e.code) switchProcess.errorCode = e.code
-      setStatusFailed(update, status, switchProcess)
+      statusManager.setStatusFailed(updateStepWithStatus, status, switchProcess)
       setIsSwapping(false)
       return false
     }
-    setStatusDone(update, status, switchProcess)
+    statusManager.setStatusDone(updateStepWithStatus, status, switchProcess)
     return true
   }
 
