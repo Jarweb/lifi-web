@@ -120,14 +120,15 @@ const Swapping = ({ route, updateRoute, onSwapDone }: SwappingProps) => {
     const settings = { updateCallback }
     const statusManager = new StatusManager(route, { ...DefaultExecutionSettings, ...settings })
 
-    const { status, updateStepWithStatus } = statusManager.initStatus(step)
+    const { currentExecution, updateExecution } = statusManager.initExecutionObject(step)
     const chain = getChainById(step.action.fromChainId)
     const switchProcess = statusManager.createAndPushProcess(
       'switchProcess',
-      updateStepWithStatus,
-      status,
+      updateExecution,
+      currentExecution,
       `Change Chain to ${chain.name}`,
     )
+
     try {
       const switched = await switchChain(step.action.fromChainId)
       if (!switched) {
@@ -136,11 +137,11 @@ const Swapping = ({ route, updateRoute, onSwapDone }: SwappingProps) => {
     } catch (e: any) {
       if (e.message) switchProcess.errorMessage = e.message
       if (e.code) switchProcess.errorCode = e.code
-      statusManager.setStatusFailed(updateStepWithStatus, status, switchProcess)
+      statusManager.setStatusFailed(updateExecution, currentExecution, switchProcess)
       setIsSwapping(false)
       return false
     }
-    statusManager.setStatusDone(updateStepWithStatus, status, switchProcess)
+    statusManager.setStatusDone(updateExecution, currentExecution, switchProcess)
     return true
   }
 
